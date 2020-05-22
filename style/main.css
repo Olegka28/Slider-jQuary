@@ -11,6 +11,10 @@
     overflow: hidden;
     border-radius: 20%;
 }
+.slider_slides {
+    display: flex;
+    transition: transform ease-in 0.7s;
+}
 
 .slider_arrow {
     position: absolute;
@@ -45,7 +49,6 @@
 }
 
 .slider_item {
-    display: none;
     max-width: 100%;
 }
 

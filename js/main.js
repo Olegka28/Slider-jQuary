@@ -7,156 +7,183 @@
 // Сделать минимум 2-3 дополнительных задания на выбор. Звездочка обозначает сложность задания.
 
 //++ (*) Вместо fadeIn/Out сделать анимацию slideIn/slideOut
-// (*) Несколько слайдеров на странице должны работать вместе корректно.
+//++ (*) Несколько слайдеров на странице должны работать вместе корректно.
 //++ (*) Реализовать возможность автоматической смены слайдов по таймауту. Учесть что таймер нужно обнулять после пользовательского выбора слайда.
 //++ (*) Организовать слайдер как функцию, которая принимает html элемент слайдера и список параметров (показывать ли стрелки, пагинацию, скорость анимации...).
 //++ (**) По клику на слайд должна открываться модалка с содержимым слайда.
 //++ (**) Реализовать возможно бесконечной смены слайдов (если мы дошли до конца слайдера следующий клик на правую стрелочку покажет первый слайд) и тоже самое если нажимаем на левую стрелку когда находимся на первом элементе должны прыгнуть в конец слайдера.
 // (***) Слайдер внутри слайдера должен работать корректно.
 
-function slider(selector) {
-    let slider = $(selector);
-    let imgs = slider.children();
+function createSlider ( {
+    selector, 
+    autoPlay = false, 
+    autoPlayTime = 4000, 
+    timeAnimation = 700 
+} ) {
+    const slider = selector[0];
+    const imgItems = selector.children();
+    const currentImg = imgItems.length;
+    let currentSlide = 0;
 
-    slider
-        .addClass('slider')
-        .append('<a href="#" class="slider_arrow slider_arrow_left"></a>').append('<div class="slider_slides"></div>')
+    let timerId = null;
+
+    if(autoPlay){
+        autoPlayTimer();
+    }
+
+    function autoPlayTimer () {
+        if (timerId) {
+            clearInterval(timerId);
+        }
+        timerId = setInterval(() => {
+            slideMove(currentSlide + 1);
+        }, autoPlayTime)
+    }
+
+    imgItems
+        .addClass('slider_item')
+    
+    const firsImg = imgItems[0];
+    firsImg.classList.add('slider_item_active')
+
+    selector
+        .append('<a href="#" class="slider_arrow slider_arrow_left"></a>')
+        .append('<div class="slider_slides"></div>')
         .append('<div class="slider_dots"></div>')
         .append('<a href="#" class="slider_arrow slider_arrow_right"></a>')
-        .on('click', '.slider_arrow, .slider_dot', function slideTo (event) {
-            event.preventDefault();
-                
-            let a = $(this);
-            let active = slider.find('.slider_item_active');
-            let current = active.index();
-            let next = current;
-            let left = false;
-
-            // console.log(current);
-            // console.log(next);
-
-            if (a.hasClass('slider_arrow_left')) {
-                setInterval(() => current - 1 >= 0 ? current - 1 : imgs.length - 1, 1000)
-                next = current - 1 >= 0 ? current - 1 : imgs.length - 1;
-                left = true;
-            } else if (a.hasClass('slider_arrow_right')) {
-                next = (current + 1) % imgs.length;
-            } else {
-                next = a.index();
-                left = next < current ? true : false;
-            }
-            
-            if(current === next) {
-                return
-            }
-
-            slider.append('<div class="slider_temp"></div>');
-
-            let temp = slider.find(".slider_temp");
-            let i = current;
-            let j = 0;
-            let animate = {};
-
-            while (true) {
-                let img = imgs
-                    .eq(i)
-                    .clone()
-                    .css({
-                        display: 'inline-block',
-                        width: slider.css('width')
-                    });
-
-                    if (left) {
-                        img.prependTo(temp);
-                    } else {
-                        img.appendTo(temp);
-                    }
-
-                    if (i === next) {
-                        break;
-                    }
-
-                    if(left) {
-                        i = i - 1 >= 0 ? i - 1 : imgs.length - 1;
-                        j--;
-                    } else {
-                        i = (i + 1) % imgs.length;
-                        j++;
-                    }
-            }
-
-            temp.css({
-                width: (Math.abs(j) + 1) * 100 + '%',
-                position: 'absolute',
-                top: 0
-            });
-
-            if (left) {
-                temp.css('left', j * 100 + '%');
-                animate.left = 0;
-            } else {
-                temp.css('left', 0);
-                animate.left = j * 100 + '%';
-            }
-
-            active.removeClass('slider_item_active');
-            slider
-                .find('.slider_dot')
-                .removeClass('slider_dot_active')
-
-            imgs
-                .eq(next)
-                .addClass('slider_item_active')
-
-            slider
-                .find('.slider_dot')
-                .eq(next)
-                .addClass('slider_dot_active')
 
 
-            temp.animate(animate, 500, function() {
-                temp.remove();
-            })
-        });
+    const sliderSlides = selector.find('.slider_slides');
     
-    let slides = slider.children('.slider_slides');
-    let dots = slider.children('.slider_dots');
+    sliderSlides
+        .append(imgItems);
 
-    imgs
-        .prependTo(slides)
-        .each((i) => {
-            if (!i) {
-                dots.append('<a href="#" class="slider_dot slider_dot_active"></a>')
-            } else {
-                dots.append('<a href="#" class="slider_dot"></a>')
+    const sliderWidth = slider.clientWidth
+    const trackWidth = sliderWidth * currentImg;
+   
+    sliderSlides.css({
+        width: trackWidth
+    })
+
+     
+    imgItems
+        .each((index, value) => value.style.width = sliderWidth + 'px');
+
+    const sliderArrowRight = selector.find('.slider_arrow_right');
+    const sliderArrowLeft = selector.find('.slider_arrow_left');
+    
+
+    sliderArrowRight
+        .attr('data-slide-to', 1);
+
+    sliderArrowLeft
+        .attr('data-slide-to', -1);
+
+    selector  
+        .on('click','.slider_arrow, .slider_dot', function(event){
+            event.preventDefault();
+
+            const sliderArrow = event.target.closest('.slider_arrow');
+            const dotsSlider = event.target.closest('.slider_dot');
+
+            if(sliderArrow) {
+                const sliderTo = Number(sliderArrow.getAttribute('data-slide-to'));
+                slideMove(currentSlide + sliderTo)
+                
+            }
+            if(dotsSlider) {
+                const dotsTo = Number(dotsSlider.getAttribute('data-slide-index'))
+                slideMove(dotsTo)
             }
         })
-        .addClass('slider_item')
-        .eq(0)
-        .addClass('slider_item_active');
-        
-        $('.slider_item').on('click', modal);
 
-        function modal () {
-
-        let modal = $(".modal");
-        let modalImg = $('#modalImg')
-        let captionText = modal.find(".caption");
-        let activeImg = $('.slider_item_active')
-
-            modal.css({
-                display: 'block',
-            });
-            if (activeImg.hasClass('slider_item_active')) {
-                modalImg.attr('src', activeImg.attr('src'));
-                captionText.text(activeImg.attr('alt'));
+    const dot = selector.children('.slider_dots');
+    
+    imgItems
+        .prependTo(sliderSlides)
+        .each((i) => {
+            if (!i) {
+                dot.append(`<a data-slide-index="${i}" href="#" class="slider_dot slider_dot_active"></a>`)
+            } else {
+                dot.append(`<a data-slide-index="${i}" href="#" class="slider_dot"></a>`)
             }
+        })
+
+function slideMove (current) {
+    if(current < 0) {
+        current = currentImg - 1
+    } else if (current >= currentImg) {
+        current = 0
     }
+    currentSlide = current;
+
+    const translate = current * sliderWidth;
+    sliderSlides.css({
+        'transform': `translateX(-${translate}px)`
+    });
+    updateActiveElement(currentSlide);
+    autoPlayTimer();
 }
 
+function updateActiveElement (active) {
 
-slider('#slider');
+    let dots = selector.find('.slider_dots').children();
+    let imgs = selector.find('.slider_slides').children();
+console.log(dots)
+    imgs.each((index, item) => {
+        if (index === active) {
+            item.classList.add('slider_item_active')
+        } 
+        else {
+            item.classList.remove('slider_item_active')
+        }
+    })
 
+    dots.each((index, child) => {
+        if (index === active) {
+            child.classList.add('slider_dot_active')
+        } 
+        else {
+            child.classList.remove('slider_dot_active')
+        }
+    })
+}
 
-// Второй слайдер
-// slider('#slider2');
+selector.find('.slider_item').on('click', modal);
+
+function modal () {
+    
+    let modal = $(".modal");
+    let modalImg = $('#modalImg')
+    let captionText = modal.find(".caption");
+    let activeImg = selector.find('.slider_item_active');
+
+        modal.css({
+            display: 'block',
+    });
+
+    if (activeImg.hasClass('slider_item_active')) {
+        modalImg.attr('src', activeImg.attr('src'));
+        captionText.text(activeImg.attr('alt'));
+    }
+}
+       
+}
+
+const sliders = $('.slider');
+
+each(sliders, (slider) => {
+    createSlider({
+        selector: $(slider),
+        autoPlay: true,
+        autoPlayTime: 3000,
+        timeAnimation: 700,
+    })
+})
+
+function each (collection, cb) {
+    for (let index = 0; index < collection.length; index++){
+        const element = collection[index]
+        cb(element, index)
+    }
+}
